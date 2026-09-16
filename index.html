@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trip Logger</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #ffffff);
+    --surface: var(--tg-theme-secondary-bg-color, #f1f1f4);
+    --text: var(--tg-theme-text-color, #000000);
+    --muted: var(--tg-theme-hint-color, #8b8b90);
+    --accent: var(--tg-theme-button-color, #2f81f7);
+    --accent-text: var(--tg-theme-button-text-color, #ffffff);
+    --danger: #d64545;
+    --ok: #2e9e5b;
+    --line: rgba(128,128,128,0.22);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .hide { display: none !important; }
+
+  /* Header */
+  .trip-id { font-size: 12px; color: var(--muted); }
+  .trip-route { font-size: 16px; font-weight: 600; margin-top: 2px; }
+  .driver { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Progress list */
+  .progress { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; font-size: 13px; gap: 10px;
+  }
+  .row.done { color: var(--muted); }
+  .row.next { font-weight: 600; }
+  .row.pending { color: var(--muted); opacity: 0.45; }
+  .row .label { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .time { font-variant-numeric: tabular-nums; font-size: 12px; flex-shrink: 0; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot.done { background: var(--ok); }
+  .dot.next { background: var(--accent); }
+  .dot.pending { background: var(--muted); opacity: 0.5; }
+
+  /* Buttons */
+  button {
+    width: 100%; border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 500; font-family: inherit;
+    padding: 14px; cursor: pointer; background: var(--surface); color: var(--text);
+  }
+  button:active { opacity: 0.7; }
+  button.primary { background: var(--accent); color: var(--accent-text); }
+  button.ghost { background: transparent; color: var(--muted); font-size: 14px; padding: 12px; }
+  button.danger { color: var(--danger); }
+  button + button { margin-top: 8px; }
+
+  .section-label { font-size: 12px; color: var(--muted); margin: 16px 0 6px; }
+
+  /* Confirm card */
+  .card {
+    background: var(--surface); border-radius: 12px; padding: 14px;
+    margin-top: 12px; font-size: 14px;
+  }
+  .card .event { font-weight: 600; font-size: 16px; margin-top: 3px; }
+  .card .meta { color: var(--muted); font-size: 13px; margin-top: 3px; }
+
+  textarea {
+    width: 100%; background: var(--surface); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px; font-family: inherit; font-size: 14px;
+    margin-top: 6px; resize: none;
+  }
+
+  .back {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 14px; color: var(--muted); padding: 4px 0; cursor: pointer;
+  }
+
+  .gps { font-size: 12px; color: var(--muted); text-align: center; margin-top: 10px; }
+  .gps.ok { color: var(--ok); }
+  .gps.err { color: var(--danger); }
+
+  .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .warn { font-size: 12px; color: var(--danger); text-align: center; padding: 20px 10px; }
+</style>
+</head>
+<body>
+
+<!-- Shown if opened outside Telegram -->
+<div id="notTelegram" class="warn hide">
+  Open this from inside Telegram, using the bot's reply keyboard button.
+</div>
+
+<div id="app">
+
+  <!-- SCREEN 1: main -->
+  <div id="screenMain">
+    <div class="trip-id" id="tripId">TRP-2041</div>
+    <div class="trip-route" id="tripRoute">Wall Vision → CDI Maybunga</div>
+    <div class="driver" id="driverName">—</div>
+
+    <div class="progress" id="progressList"></div>
+
+    <div class="section-label">Next</div>
+    <button class="primary" id="btnNext">—</button>
+    <button class="ghost" id="btnOthers">Others</button>
+
+    <div class="gps" id="gpsMain">Getting location…</div>
+
+    <div class="footer">
+      <button class="ghost" id="btnReset">Reset test trip</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: others menu -->
+  <div id="screenOthers" class="hide">
+    <div class="back" id="backFromOthers">← Others</div>
+
+    <div class="section-label">Trip Cancelled</div>
+    <button data-event="Trip Cancelled — Shipper Liable">Shipper Liable</button>
+    <button data-event="Trip Cancelled — 3PL Liable">3PL Liable</button>
+    <button data-event="Trip Cancelled — NV Liable">NV Liable</button>
+
+    <div class="section-label">Disruptions</div>
+    <button data-event="Vehicle Breakdown">Vehicle Breakdown</button>
+    <button data-event="Accident">Accident</button>
+
+    <div class="section-label">Out of sequence</div>
+    <button class="ghost" id="btnAllEvents">Log a different event…</button>
+  </div>
+
+  <!-- SCREEN 3: full event list -->
+  <div id="screenAll" class="hide">
+    <div class="back" id="backFromAll">← All events</div>
+    <div class="section-label">Pick the event that happened</div>
+    <div id="allEventsList"></div>
+  </div>
+
+  <!-- SCREEN 4: confirm -->
+  <div id="screenConfirm" class="hide">
+    <div class="back" id="backFromConfirm">← Back</div>
+
+    <div class="card">
+      <div class="trip-id" id="confirmTrip">TRP-2041</div>
+      <div class="event" id="confirmEvent">—</div>
+      <div class="meta" id="confirmTime">—</div>
+      <div class="meta" id="confirmGps">—</div>
+    </div>
+
+    <div class="section-label">Note (optional)</div>
+    <textarea id="note" rows="2" placeholder="Anything worth recording"></textarea>
+
+    <button class="primary" id="btnSubmit" style="margin-top:12px">Submit</button>
+    <div class="gps" id="submitHint">Time is recorded by the server on submit.</div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------------
+  // TEST BUILD NOTES
+  // Trip data is hardcoded and progress is kept in localStorage so you
+  // can walk the sequence without a backend. In production the bot
+  // passes real trip state in when it opens this app.
+  // ---------------------------------------------------------------
+
+  var tg = window.Telegram && window.Telegram.WebApp;
+
+  if (!tg || !tg.initData) {
+    document.getElementById("app").classList.add("hide");
+    document.getElementById("notTelegram").classList.remove("hide");
+    return;
+  }
+
+  tg.ready();
+  tg.expand();
+
+  // --- Config -----------------------------------------------------
+
+  var TRIP = {
+    id: "TRP-2041",
+    route: "Wall Vision → CDI Maybunga"
+  };
+
+  var SEQUENCE = [
+    "Start Trip",
+    "Pickup — Truck Arrival",
+    "Loading Start",
+    "Loading Complete",
+    "Docs Received/Validated — Pickup",
+    "Pickup — Truck Departure",
+    "Drop off — Truck Arrival",
+    "Unloading Start",
+    "Unloading Complete",
+    "Docs Received/Validated — Drop off",
+    "Truck Departure — Drop off",
+    "Truck Arrival — Origin",
+    "Docs Handed Over",
+    "Trip Complete"
+  ];
+
+  var STORAGE_KEY = "triplogger_test_progress";
+
+  // --- State ------------------------------------------------------
+
+  var completed = loadProgress();
+  var pendingEvent = null;
+  var location = { status: "pending", lat: null, lon: null, accuracy: null };
+
+  function loadProgress() {
+    try {
+      var raw = window.localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveProgress() {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(completed));
+    } catch (e) {
+      // Private browsing or storage disabled — progress just won't persist.
+    }
+  }
+
+  function nextEvent() {
+    for (var i = 0; i < SEQUENCE.length; i++) {
+      if (!completed[SEQUENCE[i]]) return SEQUENCE[i];
+    }
+    return null;
+  }
+
+  // --- Location ---------------------------------------------------
+
+  function requestLocation() {
+    if (!navigator.geolocation) {
+      location.status = "unsupported";
+      renderGps();
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        location.status = "ok";
+        location.lat = pos.coords.latitude;
+        location.lon = pos.coords.longitude;
+        location.accuracy = Math.round(pos.coords.accuracy);
+        renderGps();
+      },
+      function (err) {
+        location.status = err.code === 1 ? "denied" : "failed";
+        renderGps();
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+    );
+  }
+
+  function gpsText() {
+    switch (location.status) {
+      case "ok":
+        return location.lat.toFixed(5) + ", " + location.lon.toFixed(5) +
+               " (±" + location.accuracy + "m)";
+      case "denied":      return "Location permission denied";
+      case "failed":      return "Could not get location";
+      case "unsupported": return "Location not available on this device";
+      default:            return "Getting location…";
+    }
+  }
+
+  function renderGps() {
+    var el = document.getElementById("gpsMain");
+    el.textContent = gpsText();
+    el.className = "gps" + (location.status === "ok" ? " ok"
+                  : (location.status === "pending" ? "" : " err"));
+    var c = document.getElementById("confirmGps");
+    if (c) c.textContent = gpsText();
+  }
+
+  // --- Rendering --------------------------------------------------
+
+  function renderHeader() {
+    document.getElementById("tripId").textContent = TRIP.id;
+    document.getElementById("tripRoute").textContent = TRIP.route;
+    var u = tg.initDataUnsafe && tg.initDataUnsafe.user;
+    document.getElementById("driverName").textContent =
+      u ? (u.first_name + (u.last_name ? " " + u.last_name : "")) : "Unknown driver";
+  }
+
+  function renderProgress() {
+    var list = document.getElementById("progressList");
+    var next = nextEvent();
+    list.innerHTML = "";
+
+    SEQUENCE.forEach(function (name) {
+      var state = completed[name] ? "done" : (name === next ? "next" : "pending");
+
+      // Keep the list short: show everything done, the next one, and
+      // one lookahead. Otherwise 14 rows dominate the screen.
+      if (state === "pending" && SEQUENCE.indexOf(name) > SEQUENCE.indexOf(next) + 1) return;
+
+      var row = document.createElement("div");
+      row.className = "row " + state;
+
+      var label = document.createElement("div");
+      label.className = "label";
+      var dot = document.createElement("span");
+      dot.className = "dot " + state;
+      var nm = document.createElement("span");
+      nm.className = "name";
+      nm.textContent = name;
+      label.appendChild(dot);
+      label.appendChild(nm);
+
+      var time = document.createElement("div");
+      time.className = "time";
+      time.textContent = completed[name] || "";
+
+      row.appendChild(label);
+      row.appendChild(time);
+      list.appendChild(row);
+    });
+
+    var btn = document.getElementById("btnNext");
+    if (next) {
+      btn.textContent = next;
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    } else {
+      btn.textContent = "Trip finished";
+      btn.disabled = true;
+      btn.style.opacity = "0.5";
+    }
+  }
+
+  function renderAllEvents() {
+    var container = document.getElementById("allEventsList");
+    container.innerHTML = "";
+    SEQUENCE.forEach(function (name) {
+      var b = document.createElement("button");
+      b.textContent = name + (completed[name] ? "  ✓" : "");
+      b.addEventListener("click", function () { goConfirm(name); });
+      container.appendChild(b);
+    });
+  }
+
+  // --- Navigation -------------------------------------------------
+
+  var screens = ["screenMain", "screenOthers", "screenAll", "screenConfirm"];
+
+  function show(id) {
+    screens.forEach(function (s) {
+      document.getElementById(s).classList.toggle("hide", s !== id);
+    });
+    if (id === "screenMain") {
+      tg.BackButton.hide();
+    } else {
+      tg.BackButton.show();
+    }
+    window.scrollTo(0, 0);
+  }
+
+  function goConfirm(eventName) {
+    pendingEvent = eventName;
+    document.getElementById("confirmTrip").textContent = TRIP.id;
+    document.getElementById("confirmEvent").textContent = eventName;
+    document.getElementById("confirmTime").textContent = localTimeLabel();
+    document.getElementById("confirmGps").textContent = gpsText();
+    document.getElementById("note").value = "";
+    show("screenConfirm");
+  }
+
+  function localTimeLabel() {
+    var d = new Date();
+    return d.toLocaleString(undefined, {
+      hour: "numeric", minute: "2-digit",
+      day: "numeric", month: "short", year: "numeric"
+    });
+  }
+
+  // --- Submit -----------------------------------------------------
+
+  function submit() {
+    if (!pendingEvent) return;
+
+    var payload = {
+      v: 1,
+      trip: TRIP.id,
+      event: pendingEvent,
+      note: document.getElementById("note").value.trim() || null,
+      lat: location.lat,
+      lon: location.lon,
+      acc: location.accuracy,
+      gps: location.status,
+      // Client time is sent for reference only. The server stamps the
+      // timestamp that actually gets logged.
+      client_time: new Date().toISOString(),
+      // Lets the script absorb duplicate submits.
+      nonce: TRIP.id + "|" + pendingEvent + "|" + Date.now()
+    };
+
+    completed[pendingEvent] = new Date().toLocaleTimeString(undefined, {
+      hour: "numeric", minute: "2-digit"
+    });
+    saveProgress();
+
+    try {
+      if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+    } catch (e) {}
+
+    // sendData() delivers to the bot and closes the Mini App.
+    // Only works when opened from a reply-keyboard web_app button.
+    tg.sendData(JSON.stringify(payload));
+  }
+
+  // --- Wiring -----------------------------------------------------
+
+  document.getElementById("btnNext").addEventListener("click", function () {
+    var n = nextEvent();
+    if (n) goConfirm(n);
+  });
+
+  document.getElementById("btnOthers").addEventListener("click", function () {
+    show("screenOthers");
+  });
+
+  document.getElementById("btnAllEvents").addEventListener("click", function () {
+    renderAllEvents();
+    show("screenAll");
+  });
+
+  document.getElementById("btnSubmit").addEventListener("click", submit);
+
+  document.getElementById("backFromOthers").addEventListener("click", function () { show("screenMain"); });
+  document.getElementById("backFromAll").addEventListener("click", function () { show("screenOthers"); });
+  document.getElementById("backFromConfirm").addEventListener("click", function () { show("screenMain"); });
+
+  Array.prototype.forEach.call(
+    document.querySelectorAll("#screenOthers button[data-event]"),
+    function (b) {
+      b.addEventListener("click", function () { goConfirm(b.getAttribute("data-event")); });
+    }
+  );
+
+  document.getElementById("btnReset").addEventListener("click", function () {
+    completed = {};
+    saveProgress();
+    renderProgress();
+  });
+
+  tg.BackButton.onClick(function () { show("screenMain"); });
+
+  // --- Start ------------------------------------------------------
+
+  renderHeader();
+  renderProgress();
+  requestLocation();
+  show("screenMain");
+})();
+</script>
+</body>
+</html>
