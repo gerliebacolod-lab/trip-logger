@@ -17,44 +17,29 @@
     --ok: #2e9e5b;
     --line: rgba(128,128,128,0.22);
   }
-
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
   body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
+    margin: 0; background: var(--bg); color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 15px;
-    line-height: 1.5;
+    font-size: 15px; line-height: 1.5;
     padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
   }
-
   .hide { display: none !important; }
 
-  /* Header */
   .trip-id { font-size: 12px; color: var(--muted); }
   .trip-route { font-size: 16px; font-weight: 600; margin-top: 2px; }
   .driver { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-  /* Progress list */
   .progress { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
-  .row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 6px 0; font-size: 13px; gap: 10px;
-  }
+  .row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; }
   .row.done { color: var(--muted); }
   .row.next { font-weight: 600; }
   .row.pending { color: var(--muted); opacity: 0.45; }
-  .row .label { display: flex; align-items: center; gap: 7px; min-width: 0; }
-  .row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .row .time { font-variant-numeric: tabular-nums; font-size: 12px; flex-shrink: 0; }
   .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .dot.done { background: var(--ok); }
   .dot.next { background: var(--accent); }
   .dot.pending { background: var(--muted); opacity: 0.5; }
 
-  /* Buttons */
   button {
     width: 100%; border: none; border-radius: 10px;
     font-size: 15px; font-weight: 500; font-family: inherit;
@@ -63,52 +48,40 @@
   button:active { opacity: 0.7; }
   button.primary { background: var(--accent); color: var(--accent-text); }
   button.ghost { background: transparent; color: var(--muted); font-size: 14px; padding: 12px; }
-  button.danger { color: var(--danger); }
   button + button { margin-top: 8px; }
 
   .section-label { font-size: 12px; color: var(--muted); margin: 16px 0 6px; }
 
-  /* Confirm card */
-  .card {
-    background: var(--surface); border-radius: 12px; padding: 14px;
-    margin-top: 12px; font-size: 14px;
-  }
+  .card { background: var(--surface); border-radius: 12px; padding: 14px; margin-top: 12px; font-size: 14px; }
   .card .event { font-weight: 600; font-size: 16px; margin-top: 3px; }
   .card .meta { color: var(--muted); font-size: 13px; margin-top: 3px; }
 
   textarea {
     width: 100%; background: var(--surface); color: var(--text);
-    border: 1px solid var(--line); border-radius: 10px;
-    padding: 10px; font-family: inherit; font-size: 14px;
-    margin-top: 6px; resize: none;
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+    font-family: inherit; font-size: 14px; margin-top: 6px; resize: none;
   }
 
-  .back {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 14px; color: var(--muted); padding: 4px 0; cursor: pointer;
-  }
+  .back { display: inline-flex; align-items: center; gap: 4px; font-size: 14px;
+          color: var(--muted); padding: 4px 0; cursor: pointer; }
 
   .gps { font-size: 12px; color: var(--muted); text-align: center; margin-top: 10px; }
   .gps.ok { color: var(--ok); }
   .gps.err { color: var(--danger); }
 
-  .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--line); }
-  .warn { font-size: 12px; color: var(--danger); text-align: center; padding: 20px 10px; }
+  .warn { font-size: 13px; color: var(--danger); text-align: center; padding: 30px 14px; line-height: 1.6; }
 </style>
 </head>
 <body>
 
-<!-- Shown if opened outside Telegram -->
-<div id="notTelegram" class="warn hide">
-  Open this from inside Telegram, using the bot's reply keyboard button.
-</div>
+<div id="blocked" class="warn hide"></div>
 
-<div id="app">
+<div id="app" class="hide">
 
-  <!-- SCREEN 1: main -->
+  <!-- MAIN -->
   <div id="screenMain">
-    <div class="trip-id" id="tripId">TRP-2041</div>
-    <div class="trip-route" id="tripRoute">Wall Vision → CDI Maybunga</div>
+    <div class="trip-id" id="tripId">—</div>
+    <div class="trip-route" id="tripRoute">—</div>
     <div class="driver" id="driverName">—</div>
 
     <div class="progress" id="progressList"></div>
@@ -118,13 +91,9 @@
     <button class="ghost" id="btnOthers">Others</button>
 
     <div class="gps" id="gpsMain">Getting location…</div>
-
-    <div class="footer">
-      <button class="ghost" id="btnReset">Reset test trip</button>
-    </div>
   </div>
 
-  <!-- SCREEN 2: others menu -->
+  <!-- OTHERS -->
   <div id="screenOthers" class="hide">
     <div class="back" id="backFromOthers">← Others</div>
 
@@ -137,33 +106,25 @@
     <button data-event="Vehicle Breakdown">Vehicle Breakdown</button>
     <button data-event="Accident">Accident</button>
 
-    <div class="section-label">Out of sequence</div>
-    <button class="ghost" id="btnAllEvents">Log a different event…</button>
+    <div class="section-label">Anything else</div>
+    <button class="ghost" id="btnFreeText">Report something else</button>
   </div>
 
-  <!-- SCREEN 3: full event list -->
-  <div id="screenAll" class="hide">
-    <div class="back" id="backFromAll">← All events</div>
-    <div class="section-label">Pick the event that happened</div>
-    <div id="allEventsList"></div>
-  </div>
-
-  <!-- SCREEN 4: confirm -->
+  <!-- CONFIRM -->
   <div id="screenConfirm" class="hide">
     <div class="back" id="backFromConfirm">← Back</div>
 
     <div class="card">
-      <div class="trip-id" id="confirmTrip">TRP-2041</div>
+      <div class="trip-id" id="confirmTrip">—</div>
       <div class="event" id="confirmEvent">—</div>
-      <div class="meta" id="confirmTime">—</div>
       <div class="meta" id="confirmGps">—</div>
     </div>
 
-    <div class="section-label">Note (optional)</div>
-    <textarea id="note" rows="2" placeholder="Anything worth recording"></textarea>
+    <div class="section-label" id="noteLabel">Note (optional)</div>
+    <textarea id="note" rows="3" placeholder="Anything worth recording"></textarea>
 
     <button class="primary" id="btnSubmit" style="margin-top:12px">Submit</button>
-    <div class="gps" id="submitHint">Time is recorded by the server on submit.</div>
+    <div class="gps">The office records the time when this arrives.</div>
   </div>
 
 </div>
@@ -172,98 +133,90 @@
 (function () {
   "use strict";
 
-  // ---------------------------------------------------------------
-  // TEST BUILD NOTES
-  // Trip data is hardcoded and progress is kept in localStorage so you
-  // can walk the sequence without a backend. In production the bot
-  // passes real trip state in when it opens this app.
-  // ---------------------------------------------------------------
+  // =================================================================
+  //  The bot is the source of truth. It opens this app with the trip
+  //  and current step in the URL, so this page never guesses and never
+  //  stores progress. Close it and reopen — the bot tells it again.
+  // =================================================================
 
   var tg = window.Telegram && window.Telegram.WebApp;
 
+  function block(msg) {
+    var el = document.getElementById("blocked");
+    el.textContent = msg;
+    el.classList.remove("hide");
+  }
+
   if (!tg || !tg.initData) {
-    document.getElementById("app").classList.add("hide");
-    document.getElementById("notTelegram").classList.remove("hide");
+    block("Open this from inside Telegram, using the Trip Logger button on your keyboard.");
     return;
   }
 
   tg.ready();
   tg.expand();
 
-  // --- Config -----------------------------------------------------
+  // --- The nine pilot events, matching the Apps Script ---------------
 
-  var TRIP = {
-    id: "TRP-2041",
-    route: "Wall Vision → CDI Maybunga"
-  };
-
-  var SEQUENCE = [
+  var EVENTS = [
     "Start Trip",
     "Pickup — Truck Arrival",
     "Loading Start",
     "Loading Complete",
-    "Docs Received/Validated — Pickup",
     "Pickup — Truck Departure",
     "Drop off — Truck Arrival",
     "Unloading Start",
     "Unloading Complete",
-    "Docs Received/Validated — Drop off",
-    "Truck Departure — Drop off",
-    "Truck Arrival — Origin",
-    "Docs Handed Over",
     "Trip Complete"
   ];
 
-  var STORAGE_KEY = "triplogger_test_progress";
+  // Steps where position is worth capturing. Must match the script's
+  // gps flags, or the app asks for location the script ignores.
+  var GPS_STEPS = { 1: true, 2: true, 5: true, 6: true, 9: true };
 
-  // --- State ------------------------------------------------------
+  // --- Read what the bot passed in ----------------------------------
 
-  var completed = loadProgress();
+  function param(name) {
+    var m = new RegExp("[?&]" + name + "=([^&]*)").exec(window.location.search);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : null;
+  }
+
+  var TRIP  = param("trip");
+  var STEP  = parseInt(param("step"), 10);
+  var ROUTE = param("route") || "";
+
+  if (!TRIP || !STEP || STEP < 1 || STEP > EVENTS.length) {
+    block("Open this from the Trip Logger button on the keyboard, not from the menu " +
+          "beside the message box. The bot needs to tell the app which trip you are on.");
+    return;
+  }
+
+  document.getElementById("app").classList.remove("hide");
+
+  // --- State --------------------------------------------------------
+
   var pendingEvent = null;
-  var location = { status: "pending", lat: null, lon: null, accuracy: null };
+  var pendingKind = null;            // "event" | "other" | "freetext"
+  var loc = { status: "pending", lat: null, lon: null, accuracy: null };
 
-  function loadProgress() {
-    try {
-      var raw = window.localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) {
-      return {};
-    }
-  }
+  function nextEventName() { return EVENTS[STEP - 1]; }
+  function nextNeedsGps()  { return !!GPS_STEPS[STEP]; }
 
-  function saveProgress() {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(completed));
-    } catch (e) {
-      // Private browsing or storage disabled — progress just won't persist.
-    }
-  }
-
-  function nextEvent() {
-    for (var i = 0; i < SEQUENCE.length; i++) {
-      if (!completed[SEQUENCE[i]]) return SEQUENCE[i];
-    }
-    return null;
-  }
-
-  // --- Location ---------------------------------------------------
+  // --- Location -----------------------------------------------------
 
   function requestLocation() {
-    if (!navigator.geolocation) {
-      location.status = "unsupported";
-      renderGps();
-      return;
-    }
+    if (!nextNeedsGps()) { loc.status = "notneeded"; renderGps(); return; }
+    if (!navigator.geolocation) { loc.status = "unsupported"; renderGps(); return; }
+
     navigator.geolocation.getCurrentPosition(
       function (pos) {
-        location.status = "ok";
-        location.lat = pos.coords.latitude;
-        location.lon = pos.coords.longitude;
-        location.accuracy = Math.round(pos.coords.accuracy);
+        loc.status = "ok";
+        loc.lat = pos.coords.latitude;
+        loc.lon = pos.coords.longitude;
+        loc.accuracy = Math.round(pos.coords.accuracy);
         renderGps();
       },
       function (err) {
-        location.status = err.code === 1 ? "denied" : "failed";
+        loc.status = (err.code === 1) ? "denied" : "failed";
         renderGps();
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
@@ -271,12 +224,11 @@
   }
 
   function gpsText() {
-    switch (location.status) {
-      case "ok":
-        return location.lat.toFixed(5) + ", " + location.lon.toFixed(5) +
-               " (±" + location.accuracy + "m)";
-      case "denied":      return "Location permission denied";
-      case "failed":      return "Could not get location";
+    switch (loc.status) {
+      case "ok":          return loc.lat.toFixed(5) + ", " + loc.lon.toFixed(5) + " (±" + loc.accuracy + "m)";
+      case "notneeded":   return "Location not needed for this step";
+      case "denied":      return "Location denied — time will still be recorded";
+      case "failed":      return "Could not get location — time will still be recorded";
       case "unsupported": return "Location not available on this device";
       default:            return "Getting location…";
     }
@@ -285,186 +237,135 @@
   function renderGps() {
     var el = document.getElementById("gpsMain");
     el.textContent = gpsText();
-    el.className = "gps" + (location.status === "ok" ? " ok"
-                  : (location.status === "pending" ? "" : " err"));
+    el.className = "gps" + (loc.status === "ok" ? " ok"
+                  : (loc.status === "pending" || loc.status === "notneeded" ? "" : " err"));
     var c = document.getElementById("confirmGps");
-    if (c) c.textContent = gpsText();
+    if (c && pendingKind === "event") c.textContent = gpsText();
   }
 
-  // --- Rendering --------------------------------------------------
+  // --- Render -------------------------------------------------------
 
   function renderHeader() {
-    document.getElementById("tripId").textContent = TRIP.id;
-    document.getElementById("tripRoute").textContent = TRIP.route;
+    document.getElementById("tripId").textContent = TRIP;
+    document.getElementById("tripRoute").textContent = ROUTE || "Trip in progress";
     var u = tg.initDataUnsafe && tg.initDataUnsafe.user;
     document.getElementById("driverName").textContent =
-      u ? (u.first_name + (u.last_name ? " " + u.last_name : "")) : "Unknown driver";
+      u ? (u.first_name + (u.last_name ? " " + u.last_name : "")) : "";
   }
 
   function renderProgress() {
     var list = document.getElementById("progressList");
-    var next = nextEvent();
     list.innerHTML = "";
 
-    SEQUENCE.forEach(function (name) {
-      var state = completed[name] ? "done" : (name === next ? "next" : "pending");
+    EVENTS.forEach(function (name, i) {
+      var n = i + 1;
+      var state = n < STEP ? "done" : (n === STEP ? "next" : "pending");
 
-      // Keep the list short: show everything done, the next one, and
-      // one lookahead. Otherwise 14 rows dominate the screen.
-      if (state === "pending" && SEQUENCE.indexOf(name) > SEQUENCE.indexOf(next) + 1) return;
+      // Keep it readable: everything done, the next step, one lookahead.
+      if (state === "pending" && n > STEP + 1) return;
 
       var row = document.createElement("div");
       row.className = "row " + state;
-
-      var label = document.createElement("div");
-      label.className = "label";
       var dot = document.createElement("span");
       dot.className = "dot " + state;
-      var nm = document.createElement("span");
-      nm.className = "name";
-      nm.textContent = name;
-      label.appendChild(dot);
-      label.appendChild(nm);
-
-      var time = document.createElement("div");
-      time.className = "time";
-      time.textContent = completed[name] || "";
-
+      var label = document.createElement("span");
+      label.textContent = name;
+      row.appendChild(dot);
       row.appendChild(label);
-      row.appendChild(time);
       list.appendChild(row);
     });
 
-    var btn = document.getElementById("btnNext");
-    if (next) {
-      btn.textContent = next;
-      btn.disabled = false;
-      btn.style.opacity = "1";
-    } else {
-      btn.textContent = "Trip finished";
-      btn.disabled = true;
-      btn.style.opacity = "0.5";
-    }
+    document.getElementById("btnNext").textContent = nextEventName();
   }
 
-  function renderAllEvents() {
-    var container = document.getElementById("allEventsList");
-    container.innerHTML = "";
-    SEQUENCE.forEach(function (name) {
-      var b = document.createElement("button");
-      b.textContent = name + (completed[name] ? "  ✓" : "");
-      b.addEventListener("click", function () { goConfirm(name); });
-      container.appendChild(b);
-    });
-  }
+  // --- Navigation ---------------------------------------------------
 
-  // --- Navigation -------------------------------------------------
-
-  var screens = ["screenMain", "screenOthers", "screenAll", "screenConfirm"];
+  var screens = ["screenMain", "screenOthers", "screenConfirm"];
 
   function show(id) {
     screens.forEach(function (s) {
       document.getElementById(s).classList.toggle("hide", s !== id);
     });
-    if (id === "screenMain") {
-      tg.BackButton.hide();
-    } else {
-      tg.BackButton.show();
-    }
+    if (id === "screenMain") tg.BackButton.hide(); else tg.BackButton.show();
     window.scrollTo(0, 0);
   }
 
-  function goConfirm(eventName) {
+  function goConfirm(eventName, kind) {
     pendingEvent = eventName;
-    document.getElementById("confirmTrip").textContent = TRIP.id;
-    document.getElementById("confirmEvent").textContent = eventName;
-    document.getElementById("confirmTime").textContent = localTimeLabel();
-    document.getElementById("confirmGps").textContent = gpsText();
+    pendingKind = kind;
+
+    document.getElementById("confirmTrip").textContent = TRIP;
+    document.getElementById("confirmEvent").textContent =
+      kind === "freetext" ? "Report to the office" : eventName;
+    document.getElementById("confirmGps").textContent =
+      kind === "event" ? gpsText() : "Goes to the office for review";
+
+    document.getElementById("noteLabel").textContent =
+      kind === "freetext" ? "What happened" : "Note (optional)";
     document.getElementById("note").value = "";
+
     show("screenConfirm");
   }
 
-  function localTimeLabel() {
-    var d = new Date();
-    return d.toLocaleString(undefined, {
-      hour: "numeric", minute: "2-digit",
-      day: "numeric", month: "short", year: "numeric"
-    });
-  }
-
-  // --- Submit -----------------------------------------------------
+  // --- Submit -------------------------------------------------------
 
   function submit() {
     if (!pendingEvent) return;
+    var note = document.getElementById("note").value.trim();
+
+    if (pendingKind === "freetext" && !note) {
+      tg.showAlert("Please type what happened first.");
+      return;
+    }
+
+    var usingLoc = (pendingKind === "event" && loc.status === "ok");
 
     var payload = {
       v: 1,
-      trip: TRIP.id,
+      kind: pendingKind,
+      trip: TRIP,
+      step: STEP,
       event: pendingEvent,
-      note: document.getElementById("note").value.trim() || null,
-      lat: location.lat,
-      lon: location.lon,
-      acc: location.accuracy,
-      gps: location.status,
-      // Client time is sent for reference only. The server stamps the
-      // timestamp that actually gets logged.
-      client_time: new Date().toISOString(),
-      // Lets the script absorb duplicate submits.
-      nonce: TRIP.id + "|" + pendingEvent + "|" + Date.now()
+      note: note || null,
+      lat: usingLoc ? loc.lat : null,
+      lon: usingLoc ? loc.lon : null,
+      acc: usingLoc ? loc.accuracy : null,
+      gps: loc.status,
+      // Phone clock — reference only. The script stamps the real time.
+      client_time: new Date().toISOString()
     };
 
-    completed[pendingEvent] = new Date().toLocaleTimeString(undefined, {
-      hour: "numeric", minute: "2-digit"
-    });
-    saveProgress();
+    try { if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success"); } catch (e) {}
 
-    try {
-      if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-    } catch (e) {}
-
-    // sendData() delivers to the bot and closes the Mini App.
-    // Only works when opened from a reply-keyboard web_app button.
+    // Delivers to the bot and closes the app. Only works when this app
+    // was opened from a reply-keyboard button.
     tg.sendData(JSON.stringify(payload));
   }
 
-  // --- Wiring -----------------------------------------------------
+  // --- Wiring -------------------------------------------------------
 
   document.getElementById("btnNext").addEventListener("click", function () {
-    var n = nextEvent();
-    if (n) goConfirm(n);
+    goConfirm(nextEventName(), "event");
   });
-
-  document.getElementById("btnOthers").addEventListener("click", function () {
-    show("screenOthers");
+  document.getElementById("btnOthers").addEventListener("click", function () { show("screenOthers"); });
+  document.getElementById("btnFreeText").addEventListener("click", function () {
+    goConfirm("Free text report", "freetext");
   });
-
-  document.getElementById("btnAllEvents").addEventListener("click", function () {
-    renderAllEvents();
-    show("screenAll");
-  });
-
   document.getElementById("btnSubmit").addEventListener("click", submit);
 
   document.getElementById("backFromOthers").addEventListener("click", function () { show("screenMain"); });
-  document.getElementById("backFromAll").addEventListener("click", function () { show("screenOthers"); });
   document.getElementById("backFromConfirm").addEventListener("click", function () { show("screenMain"); });
 
   Array.prototype.forEach.call(
     document.querySelectorAll("#screenOthers button[data-event]"),
     function (b) {
-      b.addEventListener("click", function () { goConfirm(b.getAttribute("data-event")); });
+      b.addEventListener("click", function () { goConfirm(b.getAttribute("data-event"), "other"); });
     }
   );
 
-  document.getElementById("btnReset").addEventListener("click", function () {
-    completed = {};
-    saveProgress();
-    renderProgress();
-  });
-
   tg.BackButton.onClick(function () { show("screenMain"); });
 
-  // --- Start ------------------------------------------------------
+  // --- Start --------------------------------------------------------
 
   renderHeader();
   renderProgress();
