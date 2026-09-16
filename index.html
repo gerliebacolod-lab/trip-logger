@@ -69,7 +69,8 @@
   .gps.ok { color: var(--ok); }
   .gps.err { color: var(--danger); }
 
-  .warn { font-size: 13px; color: var(--danger); text-align: center; padding: 30px 14px; line-height: 1.6; }
+  .warn { font-size: 13px; color: var(--danger); text-align: center;
+          padding: 30px 14px; line-height: 1.6; white-space: pre-line; }
 </style>
 </head>
 <body>
@@ -147,7 +148,13 @@
     el.classList.remove("hide");
   }
 
-  if (!tg || !tg.initData) {
+  // Only check that we are inside Telegram at all. initData is deliberately
+  // NOT checked here: it comes back empty on some clients and launch methods
+  // even when everything is fine, and gating on it locks the driver out of a
+  // working app. What actually matters is whether the bot passed a trip and
+  // step in the URL, which is checked below — and only the keyboard button
+  // ever supplies those.
+  if (!tg) {
     block("Open this from inside Telegram, using the Trip Logger button on your keyboard.");
     return;
   }
@@ -185,8 +192,12 @@
   var ROUTE = param("route") || "";
 
   if (!TRIP || !STEP || STEP < 1 || STEP > EVENTS.length) {
-    block("Open this from the Trip Logger button on the keyboard, not from the menu " +
-          "beside the message box. The bot needs to tell the app which trip you are on.");
+    block("No trip was passed in.\n\n" +
+          "Use the 📋 Open Trip Logger button on the keyboard below the chat, " +
+          "not the Menu button beside the message box. Only the keyboard button " +
+          "tells the app which trip you are on — and only it can send your " +
+          "submission back to the bot.\n\n" +
+          "If you have no keyboard, send /status to the bot.");
     return;
   }
 
